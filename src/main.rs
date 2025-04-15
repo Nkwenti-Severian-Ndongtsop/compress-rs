@@ -21,10 +21,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Compress a file
+    /// Compress one or more files
     Compress {
-        /// Input file path (use - for stdin)
-        input: String,
+        /// Input file paths (use - for stdin, can specify multiple files)
+        #[arg(required = true)]
+        inputs: Vec<String>,
         /// Output file path (use - for stdout)
         output: String,
         /// Use RLE compression
@@ -87,22 +88,41 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Compress {
-            input,
+            inputs,
             output,
             rle,
             lz,
         } => {
-            let data = read_input(&input)?;
+            if inputs.len() > 1 && output != "-" {
+                return Err(anyhow::anyhow!(
+                    "Cannot specify multiple input files with a single output file (except stdout)"
+                ));
+            }
 
-            let compressed = if rle {
-                compress_rle(&data)
+            let compress_fn = if rle {
+                compress_rle
             } else if lz {
-                compress_lz(&data)
+                compress_lz
             } else {
                 return Err(anyhow::anyhow!("Please specify either --rle or --lz"));
             };
 
-            write_output(&output, &compressed)?;
+            for input in &inputs {
+                let data = read_input(input)?;
+                let compressed = compress_fn(&data);
+                
+                if output == "-" {
+                    write_output(&output, &compressed)?;
+                } else {
+                    // For multiple files, append the compression extension to the output filename
+                    let output_path = if inputs.len() > 1 {
+                        format!("{}.{}", input, if rle { "rle" } else { "lz" })
+                    } else {
+                        output.clone()
+                    };
+                    write_output(&output_path, &compressed)?;
+                }
+            }
         }
         Commands::Decompress {
             input,
