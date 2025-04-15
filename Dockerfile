@@ -8,13 +8,13 @@ COPY Cargo.toml Cargo.lock ./
 COPY src/ ./src/
 
 # Build with optimizations and security flags
-RUN RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-Wl,-z,now,-z,relro,-z,noexecstack" cargo build --release
+RUN RUSTFLAGS="-C link-arg=-Wl,-z,now,-z,relro,-z,noexecstack" cargo build --release
 
 # Final stage
-FROM scratch
+FROM debian:bullseye-slim
 
 # Copy the binary from the builder stage
-COPY --from=builder /usr/src/app/target/release/rszip /rszip
+COPY --from=builder /usr/src/app/target/release/rszip /usr/local/bin/
 
 # Set the entrypoint
-ENTRYPOINT ["/rszip"] 
+ENTRYPOINT ["/usr/local/bin/rszip"] 
