@@ -150,15 +150,18 @@ fn compress_folder(files: Vec<(PathBuf, Vec<u8>)>, algorithm: &str) -> Result<Ve
         archive.push(path_bytes.len() as u8);
         archive.extend_from_slice(path_bytes);
         
-        let content_len = content.len() as u32;
-        archive.extend_from_slice(&content_len.to_le_bytes());
-        
+        // Compress the content
         let compressed = match algorithm {
             "rle" => compress_rle(&content),
             "lz" => compress_lz(&content),
             _ => return Err(anyhow::anyhow!("Invalid algorithm")),
         };
         
+        // Store the compressed content length (including magic byte)
+        let compressed_len = compressed.len() as u32;
+        archive.extend_from_slice(&compressed_len.to_le_bytes());
+        
+        // Store the compressed content (including magic byte)
         archive.extend_from_slice(&compressed);
     }
     
