@@ -132,12 +132,13 @@ fn collect_files(path: &Path) -> Result<Vec<(PathBuf, Vec<u8>)>> {
 fn compress_folder(files: Vec<(PathBuf, Vec<u8>)>, algorithm: &str) -> Result<Vec<u8>> {
     let mut archive = Vec::new();
     
-    // Add archive header
-    archive.push(match algorithm {
+    // Add archive header with magic byte
+    let magic_byte = match algorithm {
         "rle" => 0x52,
         "lz" => 0x4C,
         _ => return Err(anyhow::anyhow!("Invalid algorithm")),
-    });
+    };
+    archive.push(magic_byte);
     
     // Add number of files
     archive.push(files.len() as u8);
@@ -164,17 +165,12 @@ fn compress_folder(files: Vec<(PathBuf, Vec<u8>)>, algorithm: &str) -> Result<Ve
     Ok(archive)
 }
 
-fn decompress_folder(data: &[u8], output_dir: &Path) -> Result<()> {
+fn decompress_folder(data: &[u8], output_dir: &Path, algorithm: &str) -> Result<()> {
     if data.is_empty() {
         return Err(anyhow::anyhow!("Empty archive"));
     }
     
-    let algorithm = match data[0] {
-        0x52 => "rle",
-        0x4C => "lz",
-        _ => return Err(anyhow::anyhow!("Invalid archive format")),
-    };
-    
+    // Skip the magic byte since it's already checked by detect_algorithm
     let mut pos = 1;
     let num_files = data[pos] as usize;
     pos += 1;
@@ -297,7 +293,7 @@ fn main() -> Result<()> {
             // Create output directory if it doesn't exist
             fs::create_dir_all(output_dir)?;
             
-            let _algorithm = if rle {
+            let algorithm = if rle {
                 "rle"   
             } else if lz {
                 "lz"
@@ -316,7 +312,7 @@ fn main() -> Result<()> {
                 }
             };
             
-            decompress_folder(&data, output_dir)?;
+            decompress_folder(&data, output_dir, algorithm)?;
         }
     }
 
