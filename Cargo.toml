@@ -1,9 +1,15 @@
 [package]
-name = "rust-compressor"
-version = "0.1.0"
-edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
-description = "A CLI tool for file compression using RLE and LZ77 algorithms"
+    name = "rszip"
+    version = "0.1.0"
+edition = "2021"    
+authors = ["Nkwenti-Severian <halamadrid651643565@gmail.com>"]
+description = "A simple CLI tool to compress and decompress files using RLE and LZ77 algorithms"
+repository = "https://github.com/Nkwenti-Severian-Ndongtsop/compress-rs"
+license = "MIT"
+readme = "README.md"
+categories = ["command-line-utilities"]
+keywords = ["compress", "decompress", "rle", "lz77", "cli", "file", "compression"]
+
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }
