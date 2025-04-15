@@ -14,7 +14,7 @@ A command-line tool for file compression using RLE and LZ77 algorithms.
 ## Installation
 
 ```bash
-cargo install --path .
+cargo install rszip
 ```
 
 ## Usage
@@ -23,29 +23,29 @@ cargo install --path .
 
 ```bash
 # Using RLE
-rust-compressor compress input.txt output.rle --rle
+rszip compress input.txt output.rle --rle
 
 # Using LZ77
-rust-compressor compress input.txt output.lz --lz
+rszip compress input.txt output.lz --lz
 
 # Using stdin/stdout
-cat input.txt | rust-compressor compress - - --rle > output.rle
+cat input.txt | rszip compress - - --rle > output.rle
 ```
 
 ### Decompress a file
 
 ```bash
 # Using RLE
-rust-compressor decompress input.rle output.txt --rle
+rszip decompress input.rle output.txt --rle
 
 # Using LZ77
-rust-compressor decompress input.lz output.txt --lz
+rszip decompress input.lz output.txt --lz
 
 # Automatic detection
-rust-compressor decompress input.compressed output.txt
+rszip decompress input.compressed output.txt
 
 # Using stdin/stdout
-cat input.rle | rust-compressor decompress - - --rle > output.txt
+cat input.rle | rszip decompress - - --rle > output.txt
 ```
 
 ## File Format
