@@ -1,82 +1,82 @@
-# Rust Compressor
+# Compress-rs
 
-A command-line tool for file compression and decompression using RLE and LZ77 algorithms.
+A simple CLI tool to compress and decompress files using RLE and LZ77 algorithms.
 
 ## Features
 
-- Two compression algorithms:
-  - Run-Length Encoding (RLE)
-  - Simplified LZ77 with 20-byte sliding window
-- Support for stdin/stdout
-- Automatic algorithm detection
-- Error handling and validation
+- Compress files using RLE (Run-Length Encoding)
+- Compress files using LZ77 algorithm
+- Decompress files compressed with either algorithm
+- Simple command-line interface
 
 ## Installation
+
+### From Source
 
 ```bash
 cargo install --path .
 ```
 
-### From crates.io
+### Using Docker
+
+Pull the image from GitHub Container Registry:
 
 ```bash
-cargo install rzip
+docker pull ghcr.io/nkwenti-severian-ndongtsop/compress-rs:latest
 ```
 
 ## Usage
 
-### Compress a file
+### Basic Usage
 
 ```bash
-# Using RLE
+# Compress a file using RLE
 rszip compress input.txt output.rle --rle
 
-# Using LZ77
-rszip compress input.txt output.lz --lz
+# Compress a file using LZ77
+rszip compress input.txt output.lz77 --lz
 
-# Using stdin/stdout
-cat input.txt | rszip compress - - --rle > output.rle
+# Decompress a file
+rszip decompress input.rle output.txt
 ```
 
-### Decompress a file
+### Using Docker
 
+1. Create a directory for your files:
 ```bash
-# Using RLE
-rszip decompress input.rle output.txt --rle
-
-# Using LZ77
-rszip decompress input.lz output.txt --lz
-
-# Automatic detection
-rszip decompress input.compressed output.txt
-
-# Using stdin/stdout
-cat input.rle | rszip decompress - - --rle > output.txt
+mkdir -p test_files
 ```
 
-## File Format
-
-### RLE Format
-
-- Magic byte: 0x52
-- Data format: [byte][count] pairs
-
-### LZ77 Format
-
-- Magic byte: 0x4C
-- Commands:
-  - Literal: 0x00 [byte]
-  - Match: 0x01 [offset:u8] [length:u8]
-
-## Development
-
-### Building
-
+2. Create a test file:
 ```bash
-cargo build
+echo "This is a test file with repeated characters aaaaaaabbbbbbbccccccc" > test_files/input.txt
 ```
 
-### Testing
+3. Run compression using Docker:
+```bash
+# Compress using RLE
+docker run -v $(pwd)/test_files:/data ghcr.io/nkwenti-severian-ndongtsop/compress-rs:latest compress /data/input.txt /data/output.rle --rle
+
+# Compress using LZ77
+docker run -v $(pwd)/test_files:/data ghcr.io/nkwenti-severian-ndongtsop/compress-rs:latest compress /data/input.txt /data/output.lz77 --lz
+```
+
+4. Decompress and verify:
+```bash
+# Decompress the RLE file
+docker run -v $(pwd)/test_files:/data ghcr.io/nkwenti-severian-ndongtsop/compress-rs:latest decompress /data/output.rle /data/decompressed_rle.txt
+
+# Decompress the LZ77 file
+docker run -v $(pwd)/test_files:/data ghcr.io/nkwenti-severian-ndongtsop/compress-rs:latest decompress /data/output.lz77 /data/decompressed_lz77.txt
+
+# Verify the decompressed files match the original
+diff test_files/input.txt test_files/decompressed_rle.txt
+diff test_files/input.txt test_files/decompressed_lz77.txt
+```
+
+## Testing
+
+The project includes unit tests for both compression algorithms. To run the tests:
 
 ```bash
 cargo test
@@ -84,4 +84,4 @@ cargo test
 
 ## License
 
-MIT License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
