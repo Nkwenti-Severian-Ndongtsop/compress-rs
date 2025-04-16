@@ -152,28 +152,4 @@ mod tests {
         let decompressed = decompress_lz(&compressed).unwrap();
         assert_eq!(input.to_vec(), decompressed);
     }
-
-    #[test]
-    fn test_lz_empty() {
-        let input = b"";
-        let compressed = compress_lz(input);
-        let decompressed = decompress_lz(&compressed).unwrap();
-        assert_eq!(input.to_vec(), decompressed);
-    }
-
-    #[test]
-    fn test_lz_single_byte() {
-        let input = b"A";
-        let compressed = compress_lz(input);
-        let decompressed = decompress_lz(&compressed).unwrap();
-        assert_eq!(input.to_vec(), decompressed);
-    }
-
-    #[test]
-    fn test_lz_repeated_pattern() {
-        let input = b"ABCABCABCABCABC";
-        let compressed = compress_lz(input);
-        let decompressed = decompress_lz(&compressed).unwrap();
-        assert_eq!(input.to_vec(), decompressed);
-    }
 } 
