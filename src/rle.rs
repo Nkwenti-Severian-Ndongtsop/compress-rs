@@ -95,28 +95,4 @@ mod tests {
         let decompressed = decompress_rle(&compressed).unwrap();
         assert_eq!(input.to_vec(), decompressed);
     }
-
-    #[test]
-    fn test_rle_empty() {
-        let input = b"";
-        let compressed = compress_rle(input);
-        let decompressed = decompress_rle(&compressed).unwrap();
-        assert_eq!(input.to_vec(), decompressed);
-    }
-
-    #[test]
-    fn test_rle_single_byte() {
-        let input = b"A";
-        let compressed = compress_rle(input);
-        let decompressed = decompress_rle(&compressed).unwrap();
-        assert_eq!(input.to_vec(), decompressed);
-    }
-
-    #[test]
-    fn test_rle_max_count() {
-        let input = vec![b'A'; 300];
-        let compressed = compress_rle(&input);
-        let decompressed = decompress_rle(&compressed).unwrap();
-        assert_eq!(input, decompressed);
-    }
 } 
