@@ -1,6 +1,6 @@
 # Rust Compressor
 
-A command-line tool for file compression using RLE and LZ77 algorithms.
+A command-line tool for file compression and decompression using RLE and LZ77 algorithms.
 
 ## Features
 
@@ -14,7 +14,13 @@ A command-line tool for file compression using RLE and LZ77 algorithms.
 ## Installation
 
 ```bash
-cargo install rszip
+cargo install --path .
+```
+
+### From crates.io
+
+```bash
+cargo install rzip
 ```
 
 ## Usage
@@ -51,10 +57,12 @@ cat input.rle | rszip decompress - - --rle > output.txt
 ## File Format
 
 ### RLE Format
+
 - Magic byte: 0x52
 - Data format: [byte][count] pairs
 
 ### LZ77 Format
+
 - Magic byte: 0x4C
 - Commands:
   - Literal: 0x00 [byte]
