@@ -29,4 +29,4 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name == 'push' }}
-          tags: ghcr.io/${{ github.repository_owner }}/compress-rs:latest
+          tags: ghcr.io/nkwenti-severian-ndongtsop/compress-rs:latest
