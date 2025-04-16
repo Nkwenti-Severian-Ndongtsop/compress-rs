@@ -29,15 +29,20 @@ docker pull ghcr.io/nkwenti-severian-ndongtsop/compress-rs:latest
 
 ### Basic Usage
 
-```bash
+
 # Compress a file using RLE
-rszip compress input.txt output.rle --rle
+```bash
+rszip compress <input-file> <output-file> --rle
+```
 
 # Compress a file using LZ77
-rszip compress input.txt output.lz77 --lz
+```bash
+rszip compress <input-file> <output-file>  --lz
+```
 
 # Decompress a file
-rszip decompress input.rle output.txt
+```bash
+rszip decompress <compressed-file> <output-file>
 ```
 
 ### Using Docker
@@ -53,11 +58,14 @@ echo "This is a test file with repeated characters aaaaaaabbbbbbbccccccc" > test
 ```
 
 3. Run compression using Docker:
-```bash
+
 # Compress using RLE
+```bash
 docker run -v $(pwd)/test_files:/data ghcr.io/nkwenti-severian-ndongtsop/compress-rs:latest compress /data/input.txt /data/output.rle --rle
+```
 
 # Compress using LZ77
+```bash
 docker run -v $(pwd)/test_files:/data ghcr.io/nkwenti-severian-ndongtsop/compress-rs:latest compress /data/input.txt /data/output.lz77 --lz
 ```
 
@@ -65,11 +73,15 @@ docker run -v $(pwd)/test_files:/data ghcr.io/nkwenti-severian-ndongtsop/compres
 ```bash
 # Decompress the RLE file
 docker run -v $(pwd)/test_files:/data ghcr.io/nkwenti-severian-ndongtsop/compress-rs:latest decompress /data/output.rle /data/decompressed_rle.txt
+```
 
 # Decompress the LZ77 file
+```bash
 docker run -v $(pwd)/test_files:/data ghcr.io/nkwenti-severian-ndongtsop/compress-rs:latest decompress /data/output.lz77 /data/decompressed_lz77.txt
+```
 
 # Verify the decompressed files match the original
+```bash
 diff test_files/input.txt test_files/decompressed_rle.txt
 diff test_files/input.txt test_files/decompressed_lz77.txt
 ```
