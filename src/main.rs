@@ -1,7 +1,6 @@
 use std::{
     fs::File,
-    io::{self, Read, Write, BufReader, BufWriter, BufRead, ErrorKind},
-    path::Path,
+    io::{self, BufReader, BufWriter, BufRead, Write}
 };
 
 use anyhow::{bail, Context, Result};
