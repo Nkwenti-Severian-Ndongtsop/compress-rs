@@ -1,9 +1,10 @@
 use std::{
-    fs,
-    io::{self, Read, Write},
+    fs::File,
+    io::{self, Read, Write, BufReader, BufWriter, BufRead, ErrorKind},
+    path::Path,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 
 mod lz;
@@ -21,65 +22,62 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Compress one or more files
+    /// Compress an input file to an output file
     Compress {
-        /// Input file paths (use - for stdin, can specify multiple files)
-        #[arg(required = true)]
-        inputs: Vec<String>,
+        /// Input file path (use - for stdin)
+        input: String,
         /// Output file path (use - for stdout)
         output: String,
-        /// Use RLE compression
-        #[arg(long)]
+        /// Use RLE compression (default if not specified)
+        #[arg(long, group = "compress_algo")]
         rle: bool,
         /// Use LZ77 compression
-        #[arg(long)]
+        #[arg(long, group = "compress_algo")]
         lz: bool,
     },
-    /// Decompress a file
+    /// Decompress an input file to an output file
     Decompress {
         /// Input file path (use - for stdin)
         input: String,
         /// Output file path (use - for stdout)
         output: String,
-        /// Use RLE decompression
-        #[arg(long)]
+         /// Hint to use RLE decompression
+        #[arg(long, group = "decompress_algo")]
         rle: bool,
-        /// Use LZ77 decompression
-        #[arg(long)]
+        /// Hint to use LZ77 decompression
+        #[arg(long, group = "decompress_algo")]
         lz: bool,
     },
 }
 
-fn read_input(input: &str) -> Result<Vec<u8>> {
-    if input == "-" {
-        let mut buffer = Vec::new();
-        io::stdin().read_to_end(&mut buffer)?;
-        Ok(buffer)
+// Helper to open input (file or stdin)
+fn open_input(path: &str) -> Result<Box<dyn BufRead>> {
+    if path == "-" {
+        Ok(Box::new(BufReader::new(io::stdin()))) 
     } else {
-        fs::read(input).with_context(|| format!("Failed to read input file: {}", input))
+        let file = File::open(path).with_context(|| format!("Failed to open input file: {}", path))?;
+        Ok(Box::new(BufReader::new(file)))
     }
 }
 
-fn write_output(output: &str, data: &[u8]) -> Result<()> {
-    if output == "-" {
-        io::stdout()
-            .write_all(data)
-            .context("Failed to write to stdout")?;
+// Helper to open output (file or stdout)
+fn open_output(path: &str) -> Result<Box<dyn Write>> {
+    if path == "-" {
+        Ok(Box::new(BufWriter::new(io::stdout())))
     } else {
-        fs::write(output, data).with_context(|| format!("Failed to write output file: {}", output))?;
+        let file = File::create(path).with_context(|| format!("Failed to create output file: {}", path))?;
+        Ok(Box::new(BufWriter::new(file)))
     }
-    Ok(())
 }
 
-fn detect_algorithm(data: &[u8]) -> Result<&'static str> {
-    if data.is_empty() {
-        return Err(anyhow::anyhow!("Empty input data"));
-    }
-
-    match data[0] {
-        0x52 => Ok("rle"),
-        0x4C => Ok("lz"),
-        _ => Err(anyhow::anyhow!("Unknown compression algorithm")),
+// Function to detect algorithm by peeking at the first byte
+fn detect_algorithm_from_stream(reader: &mut dyn BufRead) -> Result<&'static str> {
+    let first_byte = reader.fill_buf()?.get(0).copied(); // Peek at first byte
+    match first_byte {
+        Some(0x52) => Ok("rle"), // RLE_MAGIC
+        Some(0x4C) => Ok("lz"),  // LZ_MAGIC
+        Some(_) => bail!("Unknown compression algorithm magic byte"),
+        None => bail!("Cannot detect algorithm from empty input"),
     }
 }
 
@@ -88,41 +86,31 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Compress {
-            inputs,
+            input,
             output,
-            rle,
+            mut rle, // Make mutable as we set default
             lz,
         } => {
-            if inputs.len() > 1 && output != "-" {
-                return Err(anyhow::anyhow!(
-                    "Cannot specify multiple input files with a single output file (except stdout)"
-                ));
+            // Default to RLE if no algorithm is specified
+            if !rle && !lz {
+                println!("No compression algorithm specified, defaulting to RLE.");
+                rle = true;
             }
 
-            let compress_fn = if rle {
-                compress_rle
-            } else if lz {
-                compress_lz
+            let mut reader = open_input(&input)?;
+            let mut writer = open_output(&output)?;
+
+            if rle {
+                println!("Compressing {} to {} using RLE...", input, output);
+                compress_rle(&mut reader, &mut writer)
+                    .with_context(|| format!("RLE compression failed from {} to {}", input, output))?;
             } else {
-                return Err(anyhow::anyhow!("Please specify either --rle or --lz"));
-            };
-
-            for input in &inputs {
-                let data = read_input(input)?;
-                let compressed = compress_fn(&data);
-                
-                if output == "-" {
-                    write_output(&output, &compressed)?;
-                } else {
-                    // For multiple files, append the compression extension to the output filename
-                    let output_path = if inputs.len() > 1 {
-                        format!("{}.{}", input, if rle { "rle" } else { "lz" })
-                    } else {
-                        output.clone()
-                    };
-                    write_output(&output_path, &compressed)?;
-                }
+                // lz must be true
+                 println!("Compressing {} to {} using LZ77...", input, output);
+                 compress_lz(&mut reader, &mut writer)
+                     .with_context(|| format!("LZ77 compression failed from {} to {}", input, output))?;
             }
+             println!("Compression successful.");
         }
         Commands::Decompress {
             input,
@@ -130,28 +118,40 @@ fn main() -> Result<()> {
             rle,
             lz,
         } => {
-            let data = read_input(&input)?;
+            let mut reader = open_input(&input)?;
+            let mut writer = open_output(&output)?;
 
-            let decompressed = if rle {
-                decompress_rle(&data)?
+            if rle {
+                println!("Decompressing {} to {} using RLE...", input, output);
+                decompress_rle(&mut reader, &mut writer)
+                   .with_context(|| format!("RLE decompression failed from {} to {}", input, output))?;
             } else if lz {
-                decompress_lz(&data)?
+                 println!("Decompressing {} to {} using LZ77...", input, output);
+                decompress_lz(&mut reader, &mut writer)
+                     .with_context(|| format!("LZ77 decompression failed from {} to {}", input, output))?;
             } else {
-                // Try to detect the algorithm
-                match detect_algorithm(&data) {
-                    Ok("rle") => decompress_rle(&data)?,
-                    Ok("lz") => decompress_lz(&data)?,
-                    Ok(_algorithm) => unreachable!(),
-                    Err(e) => {
-                        return Err(anyhow::anyhow!(
-                            "Could not detect compression algorithm. Please specify --rle or --lz: {}",
-                            e
-                        ));
+                // No hint provided, detect algorithm
+                println!("No algorithm specified, attempting detection...");
+                let algorithm = detect_algorithm_from_stream(&mut reader)
+                    .with_context(|| format!("Failed to detect algorithm for input {}", input))?;
+                
+                match algorithm {
+                    "rle" => {
+                        println!("Detected RLE. Decompressing {} to {}...", input, output);
+                         decompress_rle(&mut reader, &mut writer).with_context(|| {
+                            format!("RLE decompression failed from {} to {}", input, output)
+                        })?;
                     }
+                    "lz" => {
+                         println!("Detected LZ77. Decompressing {} to {}...", input, output);
+                         decompress_lz(&mut reader, &mut writer).with_context(|| {
+                             format!("LZ77 decompression failed from {} to {}", input, output)
+                        })?;
+                    }
+                    _ => unreachable!(), // Should be caught by detect_algorithm_from_stream
                 }
-            };
-
-            write_output(&output, &decompressed)?;
+            }
+            println!("Decompression successful.");
         }
     }
 
