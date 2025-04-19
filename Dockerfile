@@ -3,17 +3,26 @@ FROM rust:1.78.0-slim-bullseye AS builder
 
 WORKDIR /usr/src/app
 
-# Copy only the necessary files for building
+# Create a dummy source file to cache dependencies
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+
+# Copy manifests and build dependencies
 COPY Cargo.toml Cargo.lock ./
+RUN RUSTFLAGS="-C link-arg=-Wl,-z,now,-z,relro,-z,noexecstack" cargo build --release || true
+
+# Copy actual source code
 COPY src/ ./src/
 
-# Build with optimizations and security flags
+# Build the actual project
 RUN RUSTFLAGS="-C link-arg=-Wl,-z,now,-z,relro,-z,noexecstack" cargo build --release
 
-# Final stage
-FROM debian:bullseye-slim
+# Strip the binary
+RUN strip /usr/src/app/target/release/rszip
 
-# Copy the binary from the builder stage
+# Final stage
+FROM gcr.io/distroless/cc-debian11
+
+# Copy the stripped binary from the builder stage
 COPY --from=builder /usr/src/app/target/release/rszip /usr/local/bin/
 
 # Set the entrypoint
