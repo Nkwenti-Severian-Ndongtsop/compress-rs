@@ -1,0 +1,18 @@
+# Ignore build artifacts
+target/
+
+# Ignore Git history
+.git/
+
+# Ignore Cargo lock file if you want to ensure fresh dependency resolution in the build
+# Usually, you *want* the lock file copied, so keep this commented out unless needed.
+# Cargo.lock
+
+# Ignore editor backup files
+*.rs.bk
+
+# Ignore the Dockerfile itself (often not needed inside the container)
+Dockerfile
+
+# Ignore this file
+.dockerignore 
