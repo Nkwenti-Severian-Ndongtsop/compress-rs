@@ -85,7 +85,6 @@ class RLECompressTransform extends Transform {
         if (this._outputBufferPos > 0) {
             this.push(this._outputBuffer.slice(0, this._outputBufferPos));
         }
-        console.log(`RLECompressTransform: Flush complete. Total bytes processed: ${this._processedBytes}`);
         callback(); // Signal that flushing is complete
     }
 }
@@ -105,12 +104,8 @@ class RLEDecompressTransform extends Transform {
     }
 
     _pushBufferedOutput(data) {
-        // Added Log: Show lengths and totals *before* pushing and incrementing _pushedBytes
-        console.log(`RLEDecompressTransform: Pushing ${data.length} bytes. Before push - pushed total: ${this._pushedBytes}, calculated total: ${this._processedBytes}.`);
         this._pushedBytes += data.length;
         this.push(data);
-        // Optional: Log after push if needed
-        // console.log(`RLEDecompressTransform: After push. New pushed total: ${this._pushedBytes}`);
     }
 
     _transform(chunk, encoding, callback) {
@@ -147,28 +142,16 @@ class RLEDecompressTransform extends Transform {
                 return callback(new Error("Invalid RLE sequence: count cannot be zero."));
             }
 
-            // Log count being processed (verbose)
-            // console.log(`RLEDecompressTransform: Processing count ${count}`);
-
             // --- Direct Output Buffering Logic (mirroring Rust) ---
             for (let k = 0; k < count; k++) {
                 this._outputBuffer[this._outputBufferPos] = value;
                 this._outputBufferPos++;
-                // --- Add detailed log ---
-                // Only log near buffer boundaries to avoid spamming
-                if (this._outputBufferPos < 5 || this._outputBufferPos > this._outputBuffer.length - 5) {
-                   console.log(`DEBUG: Writing byte ${value} (k=${k}, count=${count}) at pos ${this._outputBufferPos-1}. New pos: ${this._outputBufferPos}`);
-                }
-                // --- End log ---
-
                 if (this._outputBufferPos === this._outputBuffer.length) {
-                    console.log(`DEBUG: Buffer full at pos ${this._outputBufferPos}. Pushing slice.`); // Modified log
                     // Push a slice of the full buffer instead of the buffer object itself
                     this._pushBufferedOutput(this._outputBuffer.slice(0, this._outputBufferPos));
                     // Still need to allocate a new buffer for subsequent writes
                     this._outputBuffer = Buffer.alloc(OUTPUT_BUFFER_SIZE);
                     this._outputBufferPos = 0;
-                    console.log(`DEBUG: Buffer slice pushed. New buffer allocated. Pos reset to 0.`); // Modified log
                 }
             }
             // --- End Direct Output Buffering ---
@@ -177,9 +160,6 @@ class RLEDecompressTransform extends Transform {
             consumedInputPos += 2; // Move past the [value, count] pair
         }
         // console.log(`RLEDecompressTransform: Loop end. consumedInputPos=${consumedInputPos}`); // Keep logs minimal
-
-        // Log bytes processed in this chunk (verbose)
-        // console.log(`RLEDecompressTransform: Bytes processed this chunk: ${this._processedBytes - initialProcessedBytes}`);
 
         // Keep any remaining part of the input buffer
         if (consumedInputPos < this._buffer.length) {
@@ -196,43 +176,36 @@ class RLEDecompressTransform extends Transform {
     }
 
     _flush(callback) {
-         console.log("RLEDecompressTransform: _flush called.");
-
         // Stricter check: Any leftover input byte (after initial magic byte processing) means an incomplete pair.
-        // Use strict inequality for the check
         if (this._buffer.length > 0) {
-            // Allow the edge case: only magic byte received, nothing processed, buffer holds only that byte (which was already conceptually consumed)
             const isOnlyMagicByteCase = this._checkedMagicByte && this._processedBytes === 0 && this._buffer.length === 1;
              if (!isOnlyMagicByteCase) {
                  console.error(`RLEDecompressTransform: Flush error - ${this._buffer.length} leftover input bytes indicate incomplete pair.`);
+                 // Keep the error reporting even without logs
                  return callback(new Error("Invalid RLE data: stream ends with incomplete pair."));
-             } else {
-                  console.log("RLEDecompressTransform: Flush - Input contained only the magic byte. OK.");
-             }
-        } else if (!this._checkedMagicByte && this._buffer.length === 0) {
-              // Valid empty input case (stream ended before magic byte arrived)
-              console.log("RLEDecompressTransform: Flush on empty stream. OK.");
-        }
+             } // else { Removed log }
+        } // else if (...) { Removed log }
 
 
         // Push any remaining data in the output buffer
         if (this._outputBufferPos > 0) {
-            console.log(`RLEDecompressTransform: Flushing final ${this._outputBufferPos} bytes.`); // Added log
-            // Pass the slice directly to _pushBufferedOutput
+            // Removed log
             this._pushBufferedOutput(this._outputBuffer.slice(0, this._outputBufferPos));
-            this._outputBufferPos = 0; // Reset position after pushing slice
-        } else {
-            console.log("RLEDecompressTransform: No final bytes to flush from output buffer."); // Added log
-        }
+            this._outputBufferPos = 0;
+        } // else { Removed log }
 
-        // Added Log: Show final totals just before the check
-        console.log(`RLEDecompressTransform: Flush almost complete. Final calculated: ${this._processedBytes}, Final pushed: ${this._pushedBytes}`);
+        // Removed Log
          if (this._processedBytes !== this._pushedBytes) {
+             // Keep the error reporting even without logs
              console.error(`RLEDecompressTransform: Mismatch detected! Calculated ${this._processedBytes} bytes but pushed ${this._pushedBytes} bytes.`);
-         } else {
-             console.log("RLEDecompressTransform: Byte counts match. OK."); // Added log
-         }
-        callback();
+             // Optionally return error: return callback(new Error("Internal error: Byte count mismatch."))
+         } // else { Removed log }
+
+         // HACK: Introduce a small delay before the final callback to test timing sensitivity
+         setTimeout(() => {
+             callback(); // Call the original callback after the delay
+         }, 10); // 10 millisecond delay (arbitrary small value)
+        // callback(); // Original immediate call
     }
 }
 
