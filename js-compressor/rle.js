@@ -21,8 +21,11 @@ class RLECompressTransform extends Transform {
 
     _maybeWriteMagicByte() {
         if (!this._wroteMagicByte) {
+            // Check if buffer has space for 1 byte
             if (this._outputBufferPos + 1 > this._outputBuffer.length) {
                 this.push(this._outputBuffer.slice(0, this._outputBufferPos));
+                // Allocate new buffer
+                this._outputBuffer = Buffer.alloc(OUTPUT_BUFFER_SIZE);
                 this._outputBufferPos = 0;
             }
             this._outputBuffer[this._outputBufferPos++] = RLE_MAGIC;
@@ -32,13 +35,17 @@ class RLECompressTransform extends Transform {
 
     _pushRun() {
         if (this._lastByte !== null) {
-            this._maybeWriteMagicByte(); // Ensure magic byte is written before first run
-            // console.log(`RLECompressTransform: Buffering run byte=${this._lastByte}, count=${this._count}`); // Verbose
-            // Check if buffer has space for 2 bytes
+            this._maybeWriteMagicByte(); // This might flush and reallocate
+
+            // Check if buffer has space for 2 bytes (value + count)
             if (this._outputBufferPos + 2 > this._outputBuffer.length) {
+                // Not enough space for the pair. Push current buffer content.
                 this.push(this._outputBuffer.slice(0, this._outputBufferPos));
+                // Allocate new buffer
+                this._outputBuffer = Buffer.alloc(OUTPUT_BUFFER_SIZE);
                 this._outputBufferPos = 0;
             }
+            // Now there is space (either initially or after flushing the old buffer)
             this._outputBuffer[this._outputBufferPos++] = this._lastByte;
             this._outputBuffer[this._outputBufferPos++] = this._count;
         }
@@ -98,8 +105,12 @@ class RLEDecompressTransform extends Transform {
     }
 
     _pushBufferedOutput(data) {
+        // Added Log: Show lengths and totals *before* pushing and incrementing _pushedBytes
+        console.log(`RLEDecompressTransform: Pushing ${data.length} bytes. Before push - pushed total: ${this._pushedBytes}, calculated total: ${this._processedBytes}.`);
         this._pushedBytes += data.length;
         this.push(data);
+        // Optional: Log after push if needed
+        // console.log(`RLEDecompressTransform: After push. New pushed total: ${this._pushedBytes}`);
     }
 
     _transform(chunk, encoding, callback) {
@@ -141,13 +152,23 @@ class RLEDecompressTransform extends Transform {
 
             // --- Direct Output Buffering Logic (mirroring Rust) ---
             for (let k = 0; k < count; k++) {
-                this._outputBuffer[this._outputBufferPos++] = value;
-                // If output buffer is full, push it and create a new one
+                this._outputBuffer[this._outputBufferPos] = value;
+                this._outputBufferPos++;
+                // --- Add detailed log ---
+                // Only log near buffer boundaries to avoid spamming
+                if (this._outputBufferPos < 5 || this._outputBufferPos > this._outputBuffer.length - 5) {
+                   console.log(`DEBUG: Writing byte ${value} (k=${k}, count=${count}) at pos ${this._outputBufferPos-1}. New pos: ${this._outputBufferPos}`);
+                }
+                // --- End log ---
+
                 if (this._outputBufferPos === this._outputBuffer.length) {
-                    // console.log(`RLEDecompressTransform: Pushing full output buffer (${this._outputBuffer.length} bytes)`); // Verbose
-                    this._pushBufferedOutput(this._outputBuffer);
-                    this._outputBuffer = Buffer.alloc(OUTPUT_BUFFER_SIZE); // Allocate new buffer
+                    console.log(`DEBUG: Buffer full at pos ${this._outputBufferPos}. Pushing slice.`); // Modified log
+                    // Push a slice of the full buffer instead of the buffer object itself
+                    this._pushBufferedOutput(this._outputBuffer.slice(0, this._outputBufferPos));
+                    // Still need to allocate a new buffer for subsequent writes
+                    this._outputBuffer = Buffer.alloc(OUTPUT_BUFFER_SIZE);
                     this._outputBufferPos = 0;
+                    console.log(`DEBUG: Buffer slice pushed. New buffer allocated. Pos reset to 0.`); // Modified log
                 }
             }
             // --- End Direct Output Buffering ---
@@ -178,35 +199,38 @@ class RLEDecompressTransform extends Transform {
          console.log("RLEDecompressTransform: _flush called.");
 
         // Stricter check: Any leftover input byte (after initial magic byte processing) means an incomplete pair.
+        // Use strict inequality for the check
         if (this._buffer.length > 0) {
-            // Only valid case for leftover is if we *only* ever received the magic byte and nothing else.
-            if (this._checkedMagicByte && this._processedBytes == 0 && this._buffer.length == 1) {
-                 // This edge case might occur if the input was *only* the magic byte.
-                 // We already consumed it conceptually, so buffer should be empty now, but check just in case.
-                  console.log("RLEDecompressTransform: Flush - Input seems to have contained only the magic byte. OK.");
-            } else {
+            // Allow the edge case: only magic byte received, nothing processed, buffer holds only that byte (which was already conceptually consumed)
+            const isOnlyMagicByteCase = this._checkedMagicByte && this._processedBytes === 0 && this._buffer.length === 1;
+             if (!isOnlyMagicByteCase) {
                  console.error(`RLEDecompressTransform: Flush error - ${this._buffer.length} leftover input bytes indicate incomplete pair.`);
                  return callback(new Error("Invalid RLE data: stream ends with incomplete pair."));
-            }
+             } else {
+                  console.log("RLEDecompressTransform: Flush - Input contained only the magic byte. OK.");
+             }
         } else if (!this._checkedMagicByte && this._buffer.length === 0) {
               // Valid empty input case (stream ended before magic byte arrived)
               console.log("RLEDecompressTransform: Flush on empty stream. OK.");
         }
 
+
         // Push any remaining data in the output buffer
         if (this._outputBufferPos > 0) {
-            console.log(`RLEDecompressTransform: Flushing remaining ${this._outputBufferPos} bytes from output buffer.`);
-            // Push only the used part
+            console.log(`RLEDecompressTransform: Flushing final ${this._outputBufferPos} bytes.`); // Added log
+            // Pass the slice directly to _pushBufferedOutput
             this._pushBufferedOutput(this._outputBuffer.slice(0, this._outputBufferPos));
-            this._outputBufferPos = 0;
+            this._outputBufferPos = 0; // Reset position after pushing slice
+        } else {
+            console.log("RLEDecompressTransform: No final bytes to flush from output buffer."); // Added log
         }
 
-        console.log(`RLEDecompressTransform: Flush complete. Total bytes calculated: ${this._processedBytes}, Total bytes pushed: ${this._pushedBytes}`);
-         // Check for discrepancy
+        // Added Log: Show final totals just before the check
+        console.log(`RLEDecompressTransform: Flush almost complete. Final calculated: ${this._processedBytes}, Final pushed: ${this._pushedBytes}`);
          if (this._processedBytes !== this._pushedBytes) {
              console.error(`RLEDecompressTransform: Mismatch detected! Calculated ${this._processedBytes} bytes but pushed ${this._pushedBytes} bytes.`);
-             // Optionally, throw an error here if desired
-             // return callback(new Error("Internal error: Mismatch between calculated and pushed byte counts."));
+         } else {
+             console.log("RLEDecompressTransform: Byte counts match. OK."); // Added log
          }
         callback();
     }
