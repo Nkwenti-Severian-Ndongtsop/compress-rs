@@ -182,6 +182,8 @@ pub fn decompress_lz(reader: &mut impl BufRead, writer: &mut impl Write) -> io::
     Ok(())
 }
 
+#[allow(dead_code)]
+
 // --- Buffer-based helper functions for testing ---
 
 /// Compresses a byte slice using LZ77 (Buffer-based wrapper).
@@ -191,6 +193,8 @@ pub fn compress(input: &[u8]) -> io::Result<Vec<u8>> {
     compress_lz(&mut reader, &mut compressed_buf)?;
     Ok(compressed_buf)
 }
+
+#[allow(dead_code)]
 
 /// Decompresses a byte slice using LZ77 (Buffer-based wrapper).
 pub fn decompress(input: &[u8]) -> io::Result<Vec<u8>> {
