@@ -104,6 +104,7 @@ pub fn decompress_rle(reader: &mut impl BufRead, writer: &mut impl Write) -> io:
 
 // --- Buffer-based helper functions for testing ---
 
+#[allow(dead_code)]
 /// Compresses a byte slice using RLE (Buffer-based wrapper).
 pub fn compress(input: &[u8]) -> io::Result<Vec<u8>> {
     let mut reader = BufReader::new(Cursor::new(input));
@@ -112,6 +113,7 @@ pub fn compress(input: &[u8]) -> io::Result<Vec<u8>> {
     Ok(compressed_buf)
 }
 
+#[allow(dead_code)]
 /// Decompresses a byte slice using RLE (Buffer-based wrapper).
 pub fn decompress(input: &[u8]) -> io::Result<Vec<u8>> {
     let mut reader = BufReader::new(Cursor::new(input));
