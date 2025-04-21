@@ -1,0 +1,35 @@
+{
+  "name": "jszip",
+  "version": "1.0.0",
+  "description": "A simple CLI tool to compress and decompress files using RLE and LZ77 algorithms (JS version)",
+  "main": "index.js",
+  "bin": {
+    "jszip": "./index.js"
+  },
+  "scripts": {
+    "test": "mocha test/*.test.js",
+    "start": "node index.js"
+  },
+  "keywords": [
+    "compress",
+    "decompress",
+    "rle",
+    "lz77",
+    "cli"
+  ],
+  "author": "Nkwenti Severian Ndongtsop <halamadrid651643565@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "chai": "^4.3.10",
+    "mocha": "^10.8.2",
+    "pkg": "^5.8.1"
+    },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nkwenti-Severian-Ndongtsop/compress-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Nkwenti-Severian-Ndongtsop/compress-js/issues"
+  },
+  "homepage": "https://github.com/Nkwenti-Severian-Ndongtsop/compress-js#readme"
+}
