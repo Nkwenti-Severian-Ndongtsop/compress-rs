@@ -23,7 +23,7 @@ cargo build
 # Build for release (optimized)
 cargo build --release
 ```
-The executable will be located at `target/debug/rszip` or `target/release/rszip`.
+The executable will be located at `target/release/rszip`.
 
 ### Running
 
@@ -48,7 +48,6 @@ cargo test
 
 **Note on Tests:** The unit tests (`src/rle.rs`, `src/lz.rs`) use helper functions that simulate streaming reads/writes. They differ from the buffer-based examples in the specification due to the fundamental difference in the I/O approach chosen for this implementation.
 
-**Note on Test Environment:** If you encounter `cargo test` errors like "unknown proxy name: 'Cursor'", this likely indicates an issue with your local Rust/Cargo network or proxy configuration (e.g., `http_proxy` environment variables, `~/.cargo/config.toml`). This tool cannot diagnose or fix such local setup issues.
 
 ## Docker
 
@@ -62,5 +61,3 @@ docker build -t rust-compressor -f rust-compressor/Dockerfile .
 # Example: Compress input.txt to output.rle using RLE
 docker run --rm -v $(pwd):/data rust-compressor compress /data/input.txt /data/output.rle --rle
 ```
-
-See the main project `README.md` for information about the combined CI/CD workflow. 
