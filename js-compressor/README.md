@@ -1,9 +1,9 @@
 # JS-Compressor
 
-[![Docker Build and Push](https://github.com/Nkwenti-Severian-Ndongtsop/compress-js/actions/workflows/docker.yml/badge.svg)](https://github.com/Nkwenti-Severian-Ndongtsop/compress-js/actions/workflows/docker.yml)
+[![Docker Build and Push Compressors](https://github.com/Nkwenti-Severian-Ndongtsop/compression-projects/actions/workflows/docker.yml/badge.svg)](https://github.com/Nkwenti-Severian-Ndongtsop/compression-projects/actions/workflows/docker.yml)
 
 A simple CLI tool to compress and decompress files using RLE and LZ77 algorithms, implemented in JavaScript (Node.js).
-This is the JavaScript counterpart to the [Rust version](https://github.com/nkwenti-severian-ndongtsop/compress-rs) in the same repository.
+This is the JavaScript counterpart to the [Rust version](https://github.com/Nkwenti-Severian-Ndongtsop/compression-projects/tree/main/rust-compressor) in the same repository.
 
 ## Features
 
@@ -24,8 +24,8 @@ This is the JavaScript counterpart to the [Rust version](https://github.com/nkwe
 
 1.  Clone the repository (if you haven't already):
     ```bash
-    git clone https://github.com/Nkwenti-Severian-Ndongtsop/compress-js.git
-    cd compress-js
+    git clone https://github.com/Nkwenti-Severian-Ndongtsop/compression-projects.git
+    cd compresssion-projects/js-compressor
     ```
 2.  Install dependencies:
     ```bash
@@ -105,6 +105,30 @@ Run the unit tests from the `compress-js` directory:
 npm test
 ```
 
-## License
+### Running Tests with Docker
+You can also run the tests inside a Docker container:
 
-This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file in the parent directory for details. 
+```bash
+docker run --rm -v "$(pwd):/app" -w /app node:18-alpine sh -c "npm install && npm test"
+```
+## Implementation Details
+- **I/O:** Uses streaming I/O (readers and writers) to handle large files without loading the entire content into memory. This approach deviates from the original specification's examples, which assumed buffer-based operations, but is necessary for robustness with potentially large inputs.
+- **LZ77 Format:** Follows the simplified format:
+    - Literal byte: `0x00` followed by the byte.
+    - Match: `0x01` followed by `offset` (u8), followed by `length` (u8).
+- **LZ77 Window Size:** Uses a small, fixed window size (`WINDOW_SIZE = 20` bytes) for the search buffer, as per requirements.
+- **RLE Format:** Uses a simple format where each run of characters is stored as a count followed by the character.
+- **Error Handling:** Basic error handling is implemented. For production use, consider enhancing error handling and validation.
+- **Performance:** The implementation is designed for simplicity and clarity rather than maximum performance. For large files or performance-critical applications, consider optimizing the algorithms further.
+- **Cross-Platform:** The implementation is designed to work on any platform that supports Node.js.
+- **Contact:** For questions or feedback, please open an issue on the GitHub repository.
+- **Future Work:** Potential future improvements include:
+    - Adding more compression algorithms (e.g., Huffman coding, Deflate).
+    - Enhancing error handling and validation.
+    - Improving performance for large files.
+    - Adding a graphical user interface (GUI) for easier use.
+    - Providing more detailed documentation and examples.
+- **References:** For more information on compression algorithms, see:
+    - [Wikipedia: Run-Length Encoding](https://en.wikipedia.org/wiki/Run-length_encoding)
+    - [Wikipedia: LZ77](https://en.wikipedia.org/wiki/LZ77)
+- **Contributing:** Contributions are welcome! Please open an issue or submit a pull request for any improvements or bug fixes.
