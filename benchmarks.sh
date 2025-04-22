@@ -9,6 +9,7 @@ RUST_EXECUTABLE="$RUST_IMPL_DIR/target/release/rszip" # Adjust if needed
 JS_SCRIPT="$JS_IMPL_DIR/index.js" # Adjust if needed
 OUTPUT_DIR="benchmark_results"
 REPORT_FILE="$OUTPUT_DIR/benchmark_report.md"
+
 # --- Helper Functions ---
 log() {
   echo "[INFO] $1"
@@ -32,15 +33,26 @@ check_dependency node
 check_dependency cargo # Assuming Rust build uses cargo
 
 # --- Input Validation ---
-if [ "$#" -ne 1 ]; then
-  echo "Usage: $0 <input_file>"
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 <input_file> <algortihm>"
   exit 1
 fi
 
 INPUT_FILE="$1"
+COMP_ALGORTIHM="$2"
+EXTENSION=""
+
 
 if [ ! -f "$INPUT_FILE" ]; then
   error_exit "Input file not found: $INPUT_FILE"
+fi
+
+if [ "$COMP_ALGORTIHM" == "--rle" ]; then 
+  EXTENSION="rle"
+elif [ "$COMP_ALGORTIHM" == "--lz" ]; then
+  EXTENSION="lz"
+else
+  error_exit "Invalid algorithm specified: $COMP_ALGORTIHM. Use --rle or --lz"
 fi
 
 log "Input file: $INPUT_FILE"
@@ -66,10 +78,10 @@ fi
 log "Setup complete. Starting benchmarks..."
 
 # Define output file paths
-RUST_COMPRESSED_FILE="$OUTPUT_DIR/$(basename "$INPUT_FILE").rs.compressed"
-RUST_DECOMPRESSED_FILE="$OUTPUT_DIR/$(basename "$INPUT_FILE").rs.decompressed"
-JS_COMPRESSED_FILE="$OUTPUT_DIR/$(basename "$INPUT_FILE").js.compressed"
-JS_DECOMPRESSED_FILE="$OUTPUT_DIR/$(basename "$INPUT_FILE").js.decompressed"
+RUST_COMPRESSED_FILE="$OUTPUT_DIR/$(basename "$INPUT_FILE").rs.compressed.$EXTENSION"
+RUST_DECOMPRESSED_FILE="$OUTPUT_DIR/$(basename "$INPUT_FILE").rs.decompressed.$EXTENSION"
+JS_COMPRESSED_FILE="$OUTPUT_DIR/$(basename "$INPUT_FILE").js.compressed.$EXTENSION"
+JS_DECOMPRESSED_FILE="$OUTPUT_DIR/$(basename "$INPUT_FILE").js.decompressed.$EXTENSION"
 TIME_FORMAT='%e %U %S' # Real, User, Sys time
 TIME_TMP_FILE=$(mktemp)
 
@@ -78,7 +90,7 @@ log "Starting Rust benchmark..."
 
 # Compression
 log "Running Rust compression..."
-/usr/bin/time -f "$TIME_FORMAT" -o "$TIME_TMP_FILE" "$RUST_EXECUTABLE" compress "$INPUT_FILE" "$RUST_COMPRESSED_FILE"
+/usr/bin/time -f "$TIME_FORMAT" -o "$TIME_TMP_FILE" "$RUST_EXECUTABLE" compress "$INPUT_FILE" "$RUST_COMPRESSED_FILE" "$COMP_ALGORTIHM"
 if [ $? -ne 0 ]; then
     error_exit "Rust compression failed."
 fi
@@ -89,7 +101,7 @@ log "Rust compressed size: $RUST_COMPRESSED_SIZE bytes"
 
 # Decompression
 log "Running Rust decompression..."
-/usr/bin/time -f "$TIME_FORMAT" -o "$TIME_TMP_FILE" "$RUST_EXECUTABLE" decompress "$RUST_COMPRESSED_FILE" "$RUST_DECOMPRESSED_FILE"
+/usr/bin/time -f "$TIME_FORMAT" -o "$TIME_TMP_FILE" "$RUST_EXECUTABLE" decompress "$RUST_COMPRESSED_FILE" "$RUST_DECOMPRESSED_FILE" "$COMP_ALGORTIHM"
 if [ $? -ne 0 ]; then
     error_exit "Rust decompression failed."
 fi
@@ -110,7 +122,7 @@ log "Starting JavaScript benchmark..."
 # Compression
 log "Running JS compression..."
 # Assuming: node compress.js compress <input> <output>
-/usr/bin/time -f "$TIME_FORMAT" -o "$TIME_TMP_FILE" node --max-old-space-size=8192 "$JS_SCRIPT" compress "$INPUT_FILE" "$JS_COMPRESSED_FILE"
+/usr/bin/time -f "$TIME_FORMAT" -o "$TIME_TMP_FILE" node --max-old-space-size=8192 "$JS_SCRIPT" compress "$INPUT_FILE" "$JS_COMPRESSED_FILE" "$COMP_ALGORTIHM"
 if [ $? -ne 0 ]; then
     error_exit "JS compression failed."
 fi
@@ -123,7 +135,7 @@ log "JS compressed size: $JS_COMPRESSED_SIZE bytes"
 log "Running JS decompression..."
 # Assuming: node compress.js decompress <input> <output>
 # Adding --rle hint as it's now required by index.js
-/usr/bin/time -f "$TIME_FORMAT" -o "$TIME_TMP_FILE" node --max-old-space-size=8192 "$JS_SCRIPT" decompress "$JS_COMPRESSED_FILE" "$JS_DECOMPRESSED_FILE" --rle
+/usr/bin/time -f "$TIME_FORMAT" -o "$TIME_TMP_FILE" node --max-old-space-size=8192 "$JS_SCRIPT" decompress "$JS_COMPRESSED_FILE" "$JS_DECOMPRESSED_FILE" "$COMP_ALGORTIHM"
 if [ $? -ne 0 ]; then
     error_exit "JS decompression failed."
 fi
