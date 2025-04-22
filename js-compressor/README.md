@@ -26,14 +26,15 @@ This is the JavaScript counterpart to the [Rust version](https://github.com/Nkwe
     ```bash
     git clone https://github.com/Nkwenti-Severian-Ndongtsop/compression-projects.git
     cd compresssion-projects/js-compressor
+    
     ```
 2.  Install dependencies:
     ```bash
     npm install
     ```
-3.  Link the package globally (optional, to use `compress-js` anywhere):
+3.  Link the package globally (optional, to use `jszip` anywhere):
     ```bash
-    npm link
+    sudo npm link
     ```
     Alternatively, run using `node index.js ...` from the `compress-js` directory.
 
@@ -49,21 +50,21 @@ docker pull ghcr.io/nkwenti-severian-ndongtsop/compress-js:latest
 
 ### Basic CLI Usage
 
-Replace `compress-js` with `node index.js` if you didn't run `npm link`.
+Replace `jszip` with `node index.js` if you didn't run `sudo npm link`.
 
 ```bash
 # Show help
-compress-js --help
+jszip --help
 
 # Compress a file using RLE
-compress-js compress <input-file> <output-file.rle> --rle
+jszip compress <input-file> <output-file.rle> --rle
 
 # Compress a file using LZ77
-compress-js compress <input-file> <output-file.lz77> --lz
+jszip compress <input-file> <output-file.lz77> --lz
 
 # Decompress a file (RLE or LZ77)
 # Providing the algorithm hint (--rle or --lz) might be needed for ambiguous files
-compress-js decompress <compressed-file> <output-file> [--rle|--lz]
+jszip decompress <compressed-file> <output-file> [--rle|--lz]
 ```
 
 ### Using Docker
