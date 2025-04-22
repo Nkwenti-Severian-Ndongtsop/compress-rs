@@ -20,6 +20,15 @@ COPY . .
 # Build the standalone executable for Alpine Linux
 RUN npx pkg . --targets node18-alpine-x64 --output /app/compress-js-alpine
 
+# Compress the executable with UPX using default settings - REMOVED again as it causes runtime errors
+# RUN upx /app/compress-js-alpine
+
+# Stage 2: Final minimal image
+# Use specific alpine version instead of latest
+# WARNING: pkg-built Node.js executables usually require dynamic libraries (like libc/musl) 
+#          which are NOT present in the 'scratch' image. This is unlikely to work, even with UPX.
+# Use specific Alpine version
+
 FROM alpine:3.21 
 
 WORKDIR /app
