@@ -9,7 +9,6 @@ RUN apk update && apk add --no-cache python3 make g++ upx && rm -rf /var/cache/a
 
 # Copy package files - copy lock file separately for better caching
 COPY package.json ./
-COPY package-lock.json ./
 
 # Use npm ci for faster, deterministic installs based on lock file
 RUN npm ci --verbose
