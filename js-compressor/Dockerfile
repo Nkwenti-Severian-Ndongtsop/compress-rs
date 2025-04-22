@@ -28,7 +28,8 @@ RUN npx pkg . --targets node18-alpine-x64 --output /app/compress-js-alpine
 # WARNING: pkg-built Node.js executables usually require dynamic libraries (like libc/musl) 
 #          which are NOT present in the 'scratch' image. This is unlikely to work, even with UPX.
 # Use specific Alpine version
-FROM alpine:3.19 
+
+FROM alpine:3.21 
 
 WORKDIR /app
 
